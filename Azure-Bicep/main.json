@@ -1,0 +1,492 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.7.4.23292",
+      "templateHash": "2829536489836591262"
+    }
+  },
+  "parameters": {
+    "project": {
+      "type": "string"
+    },
+    "env": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to add to the resources"
+      }
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "Virtual network address prefix"
+      }
+    },
+    "SubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "Subnet address prefix"
+      }
+    },
+    "SubnetPrivateEndpointPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.1.0/24"
+    },
+    "containerNames": {
+      "type": "array",
+      "defaultValue": [
+        "raw",
+        "clean",
+        "transformed"
+      ]
+    }
+  },
+  "variables": {
+    "name_vnet": "[format('vnet-{0}-{1}', parameters('project'), parameters('env'))]",
+    "name_snet": "[format('subnet-{0}-{1}', parameters('project'), parameters('env'))]",
+    "servername": "[format('sqlsrv-{0}-{1}10', parameters('project'), parameters('env'))]",
+    "dbname": "[format('sqldb-{0}2', parameters('env'))]",
+    "nameadf": "[format('adf-{0}-{1}10', parameters('project'), parameters('env'))]",
+    "namesta": "[format('sta{0}{1}', parameters('project'), parameters('env'))]",
+    "namekv": "[format('kv-{0}-{1}', parameters('project'), parameters('env'))]",
+    "namesynapse": "[format('synapse-{0}-{1}', parameters('project'), parameters('env'))]",
+    "azureSqlPrivateDnsZone": "privatelink.database.windows.net",
+    "keyVaultPrivateDnsZone": "privatelink.vaultcore.azure.net",
+    "SynapsePrivateDnsZone": "privatelink.azuresynapse.net",
+    "StorageAccountPrivateDnsZone": "privatelink.blob.core.windows.net",
+    "DataFactoryPrivateDnsZone": "privatelink.datafactory.azure.net",
+    "privateDnsZoneNames": [
+      "[variables('azureSqlPrivateDnsZone')]",
+      "[variables('keyVaultPrivateDnsZone')]",
+      "[variables('SynapsePrivateDnsZone')]",
+      "[variables('StorageAccountPrivateDnsZone')]",
+      "[variables('DataFactoryPrivateDnsZone')]"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2020-03-01",
+      "name": "[format('{0}/{1}', format('{0}-sql-pe', variables('servername')), 'dnsgroup')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "config",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('azureSqlPrivateDnsZone'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-sql-pe', variables('servername')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2020-03-01",
+      "name": "[format('{0}/{1}', format('{0}-stg-pe', variables('namesta')), 'dnsgroup')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "config",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('StorageAccountPrivateDnsZone'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-stg-pe', variables('namesta')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2020-03-01",
+      "name": "[format('{0}/{1}', format('{0}-adf-pe', variables('nameadf')), 'dnsgroup')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "config",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('DataFactoryPrivateDnsZone'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-adf-pe', variables('nameadf')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2020-03-01",
+      "name": "[format('{0}/{1}', format('{0}-saws-pe', variables('namesynapse')), 'dnsgroup')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "config",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('SynapsePrivateDnsZone'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-saws-pe', variables('namesynapse')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2020-03-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-pe', variables('namekv')), 'dnsgroup')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "config",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('keyVaultPrivateDnsZone'))]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-kv-pe', variables('namekv')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2020-07-01",
+      "name": "[variables('name_vnet')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('name_snet')]",
+            "properties": {
+              "addressPrefix": "[parameters('SubnetPrefix')]",
+              "privateEndpointNetworkPolicies": "Disabled",
+              "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+          },
+          {
+            "name": "private-endpoints",
+            "properties": {
+              "addressPrefix": "[parameters('SubnetPrivateEndpointPrefix')]",
+              "privateEndpointNetworkPolicies": "Disabled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2019-06-01-preview",
+      "name": "[variables('servername')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "administratorLogin": "c5admin",
+        "administratorLoginPassword": "DPL@admin123"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2020-08-01-preview",
+      "name": "[format('{0}/{1}', variables('servername'), variables('dbname'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('servername'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DataFactory/factories",
+      "apiVersion": "2018-06-01",
+      "name": "[variables('nameadf')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-06-01",
+      "name": "[variables('namesta')]",
+      "location": "[parameters('location')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "accessTier": "Hot",
+        "isHnsEnabled": true,
+        "networkAcls": {
+          "bypass": "None",
+          "defaultAction": "Deny"
+        }
+      }
+    },
+    {
+      "copy": {
+        "name": "blob",
+        "count": "[length(parameters('containerNames'))]"
+      },
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2019-06-01",
+      "name": "[format('{0}/default/{1}', variables('namesta'), parameters('containerNames')[copyIndex()])]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2019-09-01",
+      "name": "[variables('namekv')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "enabledForTemplateDeployment": true,
+        "enableRbacAuthorization": true
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-02-01",
+      "name": "[format('{0}/default', variables('namesta'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-02-01",
+      "name": "[format('{0}/default/synapsedl', variables('namesta'))]",
+      "properties": {
+        "publicAccess": "None"
+      },
+      "dependsOn": [
+        "blob",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Synapse/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('namesynapse')]",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "tags": {
+        "Env": "[parameters('env')]",
+        "ringValue": "r1"
+      },
+      "properties": {
+        "sqlAdministratorLogin": "c5admin",
+        "defaultDataLakeStorage": {
+          "resourceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]",
+          "accountUrl": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))).primaryEndpoints.dfs]",
+          "filesystem": "synapsedl"
+        },
+        "managedVirtualNetwork": "default",
+        "managedVirtualNetworkSettings": {
+          "preventDataExfiltration": true
+        },
+        "trustedServiceBypassEnabled": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "privateDnsZones",
+        "count": "[length(variables('privateDnsZoneNames'))]"
+      },
+      "type": "Microsoft.Network/privateDnsZones",
+      "apiVersion": "2018-09-01",
+      "name": "[variables('privateDnsZoneNames')[copyIndex()]]",
+      "location": "global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "virtualNetworkLinks",
+        "count": "[length(variables('privateDnsZoneNames'))]"
+      },
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}/{1}', variables('privateDnsZoneNames')[copyIndex()], format('link-to-{0}', variables('name_vnet')))]",
+      "location": "global",
+      "properties": {
+        "registrationEnabled": false,
+        "virtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneNames')[copyIndex()])]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}-sql-pe', variables('servername'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "subnet": {
+          "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))).subnets[1].id]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[format('{0}-sql-pe-conn', variables('servername'))]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Sql/servers', variables('servername'))]",
+              "groupIds": [
+                "sqlserver"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('servername'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}-stg-pe', variables('namesta'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "subnet": {
+          "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))).subnets[1].id]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[format('{0}-stg-pe-conn', variables('namesta'))]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]",
+              "groupIds": [
+                "blob"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('namesta'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}-adf-pe', variables('nameadf'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "subnet": {
+          "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))).subnets[1].id]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[format('{0}-adf-pe-conn', variables('nameadf'))]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.DataFactory/factories', variables('nameadf'))]",
+              "groupIds": [
+                "dataFactory"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories', variables('nameadf'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}-saws-pe', variables('namesynapse'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "subnet": {
+          "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))).subnets[1].id]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[format('{0}-saws-pe-conn', variables('namesynapse'))]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Synapse/workspaces', variables('namesynapse'))]",
+              "groupIds": [
+                "Dev"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Synapse/workspaces', variables('namesynapse'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}-kv-pe', variables('namekv'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "subnet": {
+          "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))).subnets[1].id]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[format('{0}-kv-pe-conn', variables('namekv'))]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.KeyVault/vaults', variables('namekv'))]",
+              "groupIds": [
+                "vault"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('namekv'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('name_vnet'))]"
+      ]
+    }
+  ]
+}
